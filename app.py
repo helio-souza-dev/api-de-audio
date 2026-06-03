@@ -7,11 +7,31 @@ import yt_dlp
 app = Flask(__name__)
 CORS(app)
 
+import urllib.request
+import re
+
+def convert_spotify_url(url):
+    if 'spotify.com' in url:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            html = urllib.request.urlopen(req).read().decode('utf-8')
+            title_match = re.search(r'<title>(.*?)</title>', html)
+            if title_match:
+                title = title_match.group(1)
+                # Clean up title: "Song Name - song and lyrics by Artist | Spotify" -> "Song Name Artist"
+                clean_title = title.replace(' - song and lyrics by ', ' ').replace(' | Spotify', '').strip()
+                return f"ytsearch1:{clean_title}"
+        except Exception:
+            pass
+    return url
+
 @app.route('/metadata')
 def get_metadata():
     url = request.args.get('url')
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
+        
+    url = convert_spotify_url(url)
     
     ydl_opts = {
         'quiet': True,
@@ -21,7 +41,11 @@ def get_metadata():
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # extract_info returns a dictionary. If it's a search, entries is a list.
             info = ydl.extract_info(url, download=False)
+            if 'entries' in info and len(info['entries']) > 0:
+                info = info['entries'][0]
+                
             return jsonify({
                 "title": info.get('title', 'Unknown'),
                 "author": info.get('uploader', 'Unknown'),
@@ -35,6 +59,8 @@ def stream_audio():
     url = request.args.get('url')
     if not url:
         return "URL parameter required", 400
+
+    url = convert_spotify_url(url)
 
     ydl_opts = {
         'format': 'bestaudio/best',
