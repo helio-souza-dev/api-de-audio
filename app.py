@@ -37,6 +37,7 @@ def get_metadata():
         'quiet': True,
         'skip_download': True,
         'no_warnings': True,
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
     }
     
     try:
@@ -66,6 +67,7 @@ def stream_audio():
         'format': 'bestaudio/best',
         'quiet': True,
         'no_warnings': True,
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
     }
 
     try:
